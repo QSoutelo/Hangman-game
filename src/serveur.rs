@@ -28,17 +28,17 @@ fn handle_client(mut stream: TcpStream, word_to_guess: String) {
                 }
             }
         } else {
-            stream.write(b"Wrong gfuess!\n").unwrap();
+            stream.write(b"Wrong guess!\n").unwrap();
             //depending on how much attempts left print a different message
 
             match attempts {
-                1 => {stream.write(b"  +---+\n  |   |\n  O   |\n /|\\  |\n / \\  |\n      |\n=========").unwrap(); }
-                2 => { stream.write(b"  +---+\n  |   |\n  O   |\n /|\\  |\n /    |\n      |\n=========").unwrap();}
-                3 => {stream.write(b"  +---+\n  |   |\n  O   |\n /|\\  |\n      |\n      |\n=========").unwrap();}
-                4 => {stream.write(b"  +---+\n  |   |\n  O   |\n /|   |\n      |\n      |\n=========").unwrap();}
-                5 => {stream.write(b"  +---+\n  |   |\n  O   |\n  |   |\n      |\n      |\n=========").unwrap();}
-                6 => {stream.write(b"  +---+\n  |   |\n  O   |\n      |\n      |\n      |\n=========").unwrap();}
-                _ => {stream.write(b"  +---+\n  |   |\n      |\n      |\n      |\n      |\n=========").unwrap();}
+                1 => {stream.write(b"  +---+\n  |   |\n  O   |\n /|\\  |\n / \\  |\n      |\n=========\n").unwrap(); }
+                2 => { stream.write(b"  +---+\n  |   |\n  O   |\n /|\\  |\n /    |\n      |\n=========\n").unwrap();}
+                3 => {stream.write(b"  +---+\n  |   |\n  O   |\n /|\\  |\n      |\n      |\n=========\n").unwrap();}
+                4 => {stream.write(b"  +---+\n  |   |\n  O   |\n /|   |\n      |\n      |\n=========\n").unwrap();}
+                5 => {stream.write(b"  +---+\n  |   |\n  O   |\n  |   |\n      |\n      |\n=========\n").unwrap();}
+                6 => {stream.write(b"  +---+\n  |   |\n  O   |\n      |\n      |\n      |\n=========\n").unwrap();}
+                _ => {stream.write(b"  +---+\n  |   |\n      |\n      |\n      |\n      |\n=========\n").unwrap();}
             }
 
             attempts -= 1;

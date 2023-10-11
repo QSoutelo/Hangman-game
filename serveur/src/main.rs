@@ -1,112 +1,92 @@
 extern crate random_word;
 use random_word::Lang;
-use std::io;
+
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
-use std::sync::{Arc, Mutex};
 use std::thread;
+use std::collections::HashSet;
+use std::sync::{Arc, Mutex};
 
-fn handle_client(
-    mut stream: TcpStream,
-    word_to_guess: String,
-    game_state: Arc<Mutex<GameState>>,
-    sender: std::sync::mpsc::Sender<String>,
-) {
-    let mut guessed_letters = Vec::new();
-    let mut attempts = 7;
+fn handle_client(mut stream: TcpStream, word_to_guess: String,game_state: Arc<Mutex<GameState>>,guessed_letters: Arc<Mutex<HashSet<char>>>) {
+    //let mut guessed_letters = Arc::new(Mutex::new(HashSet::new()));
+    //let mut attempts = 7;
     let word_chars: Vec<char> = word_to_guess.chars().collect();
+    let word_len = word_to_guess.len();
+    let _current_state = vec!['_'; word_len-1];
 
-    while attempts > 0 {
+    while game_state.lock().unwrap().remaining_attempts > 0 && game_state.lock().unwrap().current_state.contains(&'_') {
         let mut buffer = [0; 1];
         stream.read(&mut buffer).unwrap();
         let guess = buffer[0] as char;
 
-        if guessed_letters.contains(&guess) {
+        if guessed_letters.lock().unwrap().contains(&guess) {
             stream.write(b"You already guessed this letter!\n").unwrap();
-            stream.flush().unwrap(); 
             continue;
         }
-
         let mut locked_game_state = game_state.lock().unwrap();
 
         if locked_game_state.word_to_guess.contains(guess) {
             stream.write(b"Correct guess!\n").unwrap();
-            stream.flush().unwrap(); 
             for (i, letter) in word_chars.iter().enumerate() {
                 if letter == &guess {
                     locked_game_state.current_state[i] = guess;
-                    stream.flush().unwrap(); 
                 }
             }
         } else {
             stream.write(b"Wrong guess!\n").unwrap();
-            stream.flush().unwrap();
-            // match attempts {
-            //     1 => {stream.write(b"  +---+\n  |   |\n  O   |\n /|\\  |\n / \\  |\n      |\n=========\n").unwrap(); }
-            //     2 => { stream.write(b"  +---+\n  |   |\n  O   |\n /|\\  |\n /    |\n      |\n=========\n").unwrap();}
-            //     3 => {stream.write(b"  +---+\n  |   |\n  O   |\n /|\\  |\n      |\n      |\n=========\n").unwrap();}
-            //     4 => {stream.write(b"  +---+\n  |   |\n  O   |\n /|   |\n      |\n      |\n=========\n").unwrap();}
-            //     5 => {stream.write(b"  +---+\n  |   |\n  O   |\n  |   |\n      |\n      |\n=========\n").unwrap();}
-            //     6 => {stream.write(b"  +---+\n  |   |\n  O   |\n      |\n      |\n      |\n=========\n").unwrap();}
-            //     _ => {stream.write(b"  +---+\n  |   |\n      |\n      |\n      |\n      |\n=========\n").unwrap();}
-            // }
+            //depending on how much attempts left print a different message
 
-            
-            attempts -= 1;
+            match locked_game_state.remaining_attempts  {
+                1 => {stream.write(b"  +---+\n  |   |\n  O   |\n /|\\  |\n / \\  |\n      |\n=========\n").unwrap(); }
+                2 => { stream.write(b"  +---+\n  |   |\n  O   |\n /|\\  |\n /    |\n      |\n=========\n").unwrap();}
+                3 => {stream.write(b"  +---+\n  |   |\n  O   |\n /|\\  |\n      |\n      |\n=========\n").unwrap();}
+                4 => {stream.write(b"  +---+\n  |   |\n  O   |\n /|   |\n      |\n      |\n=========\n").unwrap();}
+                5 => {stream.write(b"  +---+\n  |   |\n  O   |\n  |   |\n      |\n      |\n=========\n").unwrap();}
+                6 => {stream.write(b"  +---+\n  |   |\n  O   |\n      |\n      |\n      |\n=========\n").unwrap();}
+                _ => {stream.write(b"  +---+\n  |   |\n      |\n      |\n      |\n      |\n=========\n").unwrap();}
+            }
+            guessed_letters.lock().unwrap().insert(guess);
+            locked_game_state.remaining_attempts -= 1;
         }
 
-        guessed_letters.push(guess);
-        let current_state = locked_game_state.current_state.iter().collect::<String>();
-        stream.write(current_state.as_bytes()).unwrap();
+        guessed_letters.lock().unwrap().insert(guess);
+        stream.write(&locked_game_state.current_state.iter().collect::<String>().as_bytes()).unwrap();
         stream.write(b"\n").unwrap();
-        stream.flush().unwrap(); 
-        sender.send(format!("Player: {} - {}", stream.peer_addr().unwrap(), current_state)).unwrap();
-        if !locked_game_state.current_state.contains(&'_') {
-            // Le joueur a deviné le mot
-            sender.send(format!("Player won: {}", stream.peer_addr().unwrap())).unwrap();
-            return;
-        }
     }
 
-    // Le joueur a épuisé ses tentatives
-    sender.send(format!("Player lost: {}", stream.peer_addr().unwrap())).unwrap();
+    if game_state.lock().unwrap().remaining_attempts  > 0 {
+        stream.write(b"You won!\n").unwrap();
+    } else {
+        stream.write(b"You lost! The word was ").unwrap();
+        stream.write(word_to_guess.as_bytes()).unwrap();
+        stream.write(b"\n").unwrap();
+    }
 }
-
 struct GameState {
     word_to_guess: String,
     current_state: Vec<char>,
+    remaining_attempts: i32,
 }
 
 fn main() {
     let listener = TcpListener::bind("127.0.0.1:8080").unwrap();
     println!("Server listening on port 8080...");
-
     let word = random_word::gen(Lang::Fr);
+
     let word_to_guess = word.to_string();
     let initial_state = Arc::new(Mutex::new(GameState {
         word_to_guess: word_to_guess.clone(),
         current_state: vec!['_'; word_to_guess.len()],
+        remaining_attempts : 7,
     }));
-
-    let (sender, receiver) = std::sync::mpsc::channel::<String>();
-
-    // Démarrer un thread pour gérer les mises à jour du jeu
-    thread::spawn(move || {
-        for msg in receiver {
-            // Envoyer des mises à jour du jeu à tous les joueurs
-            
-            println!("{}", msg);
-        }
-    });
-
+    let guessed_letters = Arc::new(Mutex::new(HashSet::new()));
     for stream in listener.incoming() {
-        let stream = stream.expect("failed");
+        let stream = stream.unwrap();
         let word_to_guess = word_to_guess.clone();
         let game_state = initial_state.clone();
-        let sender = sender.clone();
-
+        let guessed_letters = guessed_letters.clone();
         thread::spawn(move || {
-            handle_client(stream, word_to_guess, game_state, sender);
+            handle_client(stream, word_to_guess,game_state,guessed_letters);
         });
     }
 }

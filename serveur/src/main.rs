@@ -84,11 +84,36 @@ fn handle_client(mut stream: TcpStream, word_to_guess: String, game_state: Arc<M
 
     if game_state.lock().unwrap().attempts > 0 {
         stream.write(b"You won!\n").unwrap();
+        stream.write(b"Do you want to play again? (O/N): \n").unwrap();
     } else {
         stream.write(b"You lost! The word was ").unwrap();
         stream.write(word_to_guess.as_bytes()).unwrap();
         stream.write(b"\n").unwrap();
+        stream.write(b"Do you want to play again? (O/N): \n").unwrap();
     }
+
+
+    if ask_to_play_again(&mut stream) {
+        // Réinitialisez l'état du jeu et relancez la partie.
+        let new_word = diacritics::remove_diacritics(random_word::gen(Lang::Fr));
+        let new_game_state = Arc::new(Mutex::new(GameState {
+            word_to_guess: new_word.clone(),
+            current_state: vec!['_'; new_word.len()],
+            guessed_letters: HashSet::new(),
+            attempts: 7,
+        }));
+        handle_client(stream, new_word, new_game_state.clone());
+    } else {
+        // Fermez la connexion.
+        stream.write(b"Goodbye!").unwrap();
+    }
+}
+fn ask_to_play_again(stream: &mut TcpStream) -> bool {
+   
+    let mut buffer = [0; 1];
+    stream.read(&mut buffer).unwrap();
+    let response = buffer[0] as char;
+    response.to_ascii_uppercase() == 'O'
 }
 
 fn main() {

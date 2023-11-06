@@ -46,10 +46,7 @@ struct GameState {
 }
 
 fn handle_client(mut stream: TcpStream, word_to_guess: String, game_state: Arc<Mutex<GameState>>,broadcast_tx: Sender<Message>) {
-    //let mut guessed_letters: Arc<Mutex<HashSet<char>>>;
 
-    // let word_chars: Vec<char> = word_to_guess.chars().collect();
-    // let word_len = word_to_guess.len();
 
     while game_state.lock().unwrap().attempts > 0 && game_state.lock().unwrap().current_state.contains(&'_') {
         let mut buffer = [0; 1];
@@ -140,8 +137,7 @@ fn handle_client(mut stream: TcpStream, word_to_guess: String, game_state: Arc<M
         }
 
         guessed_letters_clone.lock().unwrap().insert(guess);
-        //stream.write(&locked_game_state.current_state.iter().collect::<String>().as_bytes()).unwrap();
-        //stream.write(b"\n").unwrap();
+
         if let Err(err) = stream.write(&locked_game_state.current_state.iter().collect::<String>().as_bytes()) {
             eprintln!("Error writing to stream: {}", err);
             break;
@@ -156,9 +152,7 @@ fn handle_client(mut stream: TcpStream, word_to_guess: String, game_state: Arc<M
         if let Err(err) = stream.write(b"You won!\n") {
             eprintln!("Error writing to stream: {}", err);
         }
-        // if let Err(err) = stream.write(b"Do you want to play again? (O/N): \n") {
-        //     eprintln!("Error writing to stream: {}", err);
-        // }
+
     } else {
         if let Err(err) = stream.write(b"You lost! The word was ") {
             eprintln!("Error writing to stream: {}", err);
@@ -166,39 +160,14 @@ fn handle_client(mut stream: TcpStream, word_to_guess: String, game_state: Arc<M
         if let Err(err) = stream.write(word_to_guess.as_bytes()) {
             eprintln!("Error writing to stream: {}", err);
         }
-        // if let Err(err) = stream.write(b"\n Do you want to play again? (O/N): \n"){
-        //     eprintln!("Error writing to stream: {}", err);
-        // }
+
     }
 
 
-    // if ask_to_play_again(&mut stream) {
-    //     // Réinitialisez l'état du jeu et relancez la partie.
-    //     let new_word = diacritics::remove_diacritics(random_word::gen(Lang::Fr));
-    //     let new_game_state = Arc::new(Mutex::new(GameState {
-    //         word_to_guess: new_word.clone(),
-    //         current_state: vec!['_'; new_word.len()],
-    //         guessed_letters: HashSet::new(),
-    //         attempts: 7,
-    //     }));
-    //     handle_client(stream, new_word, new_game_state.clone());
-    // } else {
-    //     // Fermez la connexion.
-    //     if let Err(err) = stream.write(b"Goodbye!") {
-    //         eprintln!("Error writing to stream: {}", err);
-    //     }
-    // }
+
 }
 
-// fn ask_to_play_again(stream: &mut TcpStream) -> bool {
-   
-//     let mut buffer = [0; 1];
-//     if let Err(err) = stream.read(&mut buffer) {
-//         eprintln!("Error reading from stream: {}", err);
-//     }
-//     let response = buffer[0] as char;
-//     response.to_ascii_uppercase() == 'O'
-// }
+
 
 fn main() {
     let listener = TcpListener::bind("127.0.0.1:8080").expect("Failed to bind to address");

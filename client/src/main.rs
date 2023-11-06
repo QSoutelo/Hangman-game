@@ -31,6 +31,7 @@ fn main() -> io::Result<()> {
         }
         let response = String::from_utf8_lossy(&buffer[0..bytes_read]);
         print!("{}", response);
+        buffer = [0; 128];
     }
 
     input_thread.join().expect("Input thread panicked.");

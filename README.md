@@ -1,10 +1,12 @@
 # ProjectSureEff
  This is a private student project
  from
- Quentin Soutelo
+ Quentin Soutelo,
+ Emilien Valain
 
-TODO
-- jouer en ligne depuis deux ordinateurs sur le même réseau
-- mise à jour en temps réel (un joueur devine une lettre, l'autre est mis au courant)
-- un autre mode de jeu à l'aveugle
-- générer des modes aléatoires
+## Comment jouer
+Pour jouer il faut lancer : ```cargo run``` dans le dossier serveur
+ainsi que ```cargo run``` dans le dossier client
+
+Vous pouvez lancer plusieurs clients afin de jouer en multijoueur. 
+

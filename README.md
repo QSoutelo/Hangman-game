@@ -1,4 +1,4 @@
-# ProjectSureEff
+# Project Programmation sûre et efficace
  This is a student project
  from
  Quentin Soutelo
